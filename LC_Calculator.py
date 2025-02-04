@@ -39,4 +39,4 @@ else:\
     st.warning("LPG remains cheaper over the lifetime.")\
 \
 if electric_emissions < LPG_emissions:\
-    st.success("Electric heating significantly reduces carbon emissions.")}
+    st.success("Electric heating significantly reduces carbon emissions.")
