@@ -1,83 +1,70 @@
 import streamlit as st
-import numpy as np
 from PIL import Image
+import numpy as np
 
-# Load and display University of Salford logo
-logo = Image.open("https://www.salford.ac.uk/themes/custom/uos/img/logo-horizontal.png")
+# Load University of Salford logo (Ensure the file is in the same directory)
+logo_path = "logo.png"
+try:
+    logo = Image.open(logo_path)
+    st.sidebar.image(logo, use_column_width=True)
+except Exception as e:
+    st.sidebar.error("Logo not found. Please upload 'salford_logo.png'")
 
-st.set_page_config(page_title="Lifecycle Cost & Loan Calculator", page_icon="💡")
+# Title and Description
+st.title("🔍 Lifecycle Cost & Loan Assessment Calculator")
+st.markdown("Compare the costs and sustainability impact of switching hotel water heating from LPG to electricity.")
 
-# Layout with logo in the top right corner
-col1, col2 = st.columns([3, 1])
+# User Inputs
+st.header("⚡ Scenario Inputs")
+col1, col2 = st.columns(2)
+
 with col1:
-    st.title("Lifecycle Cost & Loan Calculator ⚡")
-    st.subheader("Compare LPG vs. Electric for Hot Water Systems 🔥⚡")
+    lpg_price = st.number_input("💰 LPG Price (per kWh)", value=0.08)
+    elec_price = st.number_input("🔋 Electricity Price (per kWh)", value=0.15)
+    lpg_efficiency = st.number_input("🔥 LPG Boiler Efficiency (%)", value=85.0) / 100
+
 with col2:
-    st.image(logo, width=150)
+    annual_hot_water_kwh = st.number_input("🏨 Annual Hot Water Energy Demand (kWh)", value=50000)
+    inflation_rate = st.number_input("📈 Annual Energy Price Inflation (%)", value=2.5) / 100
+    project_lifetime = st.number_input("📅 Project Lifetime (years)", value=15)
 
-st.markdown("---")
+# Calculation
+def calculate_lifecycle_cost(energy_price, efficiency):
+    costs = []
+    for year in range(project_lifetime):
+        cost = (annual_hot_water_kwh / efficiency) * energy_price
+        costs.append(cost)
+        energy_price *= (1 + inflation_rate)
+    return np.sum(costs)
 
-# User inputs for lifecycle cost comparison
-st.subheader("Compare Lifecycle Costs 🏨")
+lpg_lifecycle_cost = calculate_lifecycle_cost(lpg_price, lpg_efficiency)
+elec_lifecycle_cost = calculate_lifecycle_cost(elec_price, 1.0)  # Electric heating efficiency ~100%
 
+diff = lpg_lifecycle_cost - elec_lifecycle_cost
+
+# Results
+st.header("📊 Results")
 col1, col2 = st.columns(2)
 with col1:
-    st.markdown("### LPG System 🔥")
-    lpg_initial = st.number_input("Initial Investment (£)", min_value=0.0, value=5000.0)
-    lpg_fuel_cost = st.number_input("Annual LPG Cost (£)", min_value=0.0, value=2000.0)
-    lpg_maintenance = st.number_input("Annual Maintenance (£)", min_value=0.0, value=500.0)
-    lpg_price_growth = st.slider("LPG Price Growth Rate (% per year)", 0, 10, 3)
-
+    st.metric("💸 LPG Lifecycle Cost", f"£{lpg_lifecycle_cost:,.2f}")
+    st.metric("⚡ Electricity Lifecycle Cost", f"£{elec_lifecycle_cost:,.2f}")
 with col2:
-    st.markdown("### Electric System ⚡")
-    elec_initial = st.number_input("Initial Investment (£)", min_value=0.0, value=8000.0)
-    elec_fuel_cost = st.number_input("Annual Electricity Cost (£)", min_value=0.0, value=1500.0)
-    elec_maintenance = st.number_input("Annual Maintenance (£)", min_value=0.0, value=400.0)
-    elec_price_growth = st.slider("Electricity Price Growth Rate (% per year)", 0, 10, 2)
-
-years = st.slider("Project Lifetime (years)", 1, 30, 10)
-inflation = st.slider("Inflation Rate (% per year)", 0, 10, 2)
-
-def calculate_lifecycle_cost(initial, fuel_cost, maintenance, price_growth, years, inflation):
-    total_cost = initial
-    for year in range(1, years + 1):
-        fuel_cost *= (1 + price_growth / 100)
-        maintenance *= (1 + inflation / 100)
-        total_cost += fuel_cost + maintenance
-    return total_cost
-
-if st.button("Calculate Lifecycle Costs ✅"):
-    lpg_total = calculate_lifecycle_cost(lpg_initial, lpg_fuel_cost, lpg_maintenance, lpg_price_growth, years, inflation)
-    elec_total = calculate_lifecycle_cost(elec_initial, elec_fuel_cost, elec_maintenance, elec_price_growth, years, inflation)
-    
-    st.markdown("### Results 📊")
-    st.write(f"**Total Cost for LPG System:** £{lpg_total:,.2f} 🔥")
-    st.write(f"**Total Cost for Electric System:** £{elec_total:,.2f} ⚡")
-    
-    if elec_total < lpg_total:
-        st.success("Switching to electric will save money in the long run! ✅")
+    if diff > 0:
+        st.success(f"✅ Switching to electricity saves £{diff:,.2f} over {project_lifetime} years!")
     else:
-        st.warning("LPG might still be the cheaper option. Consider fuel price trends. ⚠️")
+        st.warning(f"⚠️ LPG remains cheaper by £{abs(diff):,.2f} over {project_lifetime} years.")
 
-st.markdown("---")
+# Loan Assessment
+st.header("🏦 Loan Assessment")
+loan_required = st.number_input("💳 Loan Amount (£)", value=10000)
+interest_rate = st.number_input("📊 Annual Interest Rate (%)", value=5.0) / 100
+loan_term = st.number_input("📆 Loan Term (years)", value=10)
 
-# Loan Calculator
-st.subheader("Loan Calculator 💰")
-loan_amount = st.number_input("Loan Amount (£)", min_value=0.0, value=5000.0)
-interest_rate = st.slider("Annual Interest Rate (% per year)", 0.1, 15.0, 5.0)
-loan_term = st.slider("Loan Term (years)", 1, 30, 10)
+def calculate_loan_payment(principal, rate, term):
+    if rate == 0:
+        return principal / term
+    return (principal * rate / 12) / (1 - (1 + rate / 12) ** (-term * 12))
 
-def calculate_loan_payment(principal, rate, years):
-    monthly_rate = rate / 100 / 12
-    months = years * 12
-    if monthly_rate > 0:
-        payment = (principal * monthly_rate) / (1 - (1 + monthly_rate) ** -months)
-    else:
-        payment = principal / months
-    return payment * months, payment
+monthly_payment = calculate_loan_payment(loan_required, interest_rate, loan_term)
 
-if st.button("Calculate Loan Payments 💳"):
-    total_payment, monthly_payment = calculate_loan_payment(loan_amount, interest_rate, loan_term)
-    st.markdown("### Loan Repayment Details 🏦")
-    st.write(f"**Monthly Payment:** £{monthly_payment:,.2f}")
-    st.write(f"**Total Repayment Over {loan_term} Years:** £{total_payment:,.2f}")
+st.metric("💵 Monthly Loan Payment", f"£{monthly_payment:,.2f}")
