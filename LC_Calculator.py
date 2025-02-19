@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 
 # Load and display University of Salford logo
-logo = Image.open("/mnt/data/Screenshot 2025-02-19 at 00.48.56.png")
+logo = Image.open("https://www.salford.ac.uk/themes/custom/uos/img/logo-horizontal.png")
 
 st.set_page_config(page_title="Lifecycle Cost & Loan Calculator", page_icon="💡")
 
