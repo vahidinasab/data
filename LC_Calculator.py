@@ -1,43 +1,57 @@
 import streamlit as st
 import numpy as np
 
-def lifecycle_cost(initial_cost, annual_energy_consumption, fuel_price, inflation_rate, lifespan):
+def calculate_lifecycle_cost(initial_cost, energy_consumption, fuel_price, price_growth, lifespan):
     total_cost = initial_cost
-    for year in range(lifespan):
-        total_cost += annual_energy_consumption * fuel_price * ((1 + inflation_rate) ** year)
+    for year in range(1, lifespan + 1):
+        total_cost += energy_consumption * fuel_price * (1 + price_growth) ** year
     return total_cost
 
-def co2_emissions(annual_energy_consumption, emission_factor, lifespan):
-    return annual_energy_consumption * emission_factor * lifespan
+def calculate_loan_payment(loan_amount, interest_rate, loan_term):
+    monthly_rate = interest_rate / 12 / 100  # Convert annual rate to monthly decimal
+    num_payments = loan_term * 12  # Total months
+    if monthly_rate > 0:
+        payment = loan_amount * (monthly_rate * (1 + monthly_rate) ** num_payments) / ((1 + monthly_rate) ** num_payments - 1)
+    else:
+        payment = loan_amount / num_payments
+    return payment * num_payments  # Total loan repayment
 
-st.title("Lifecycle Cost & CO2 Emissions Calculator")
+st.title("Hotel Hot Water System: LPG vs. Electric Lifecycle Cost Calculator")
 
-st.sidebar.header("Input Parameters")
-initial_cost_LPG = st.sidebar.number_input("Initial Cost (LPG) in GBP", 5000)
-initial_cost_electric = st.sidebar.number_input("Initial Cost (Electric) in GBP", 7000)
-annual_energy_consumption = st.sidebar.number_input("Annual Energy Consumption (kWh)", 20000)
-LPG_price = st.sidebar.number_input("LPG Price (GBP/kWh)", 0.09)
-electricity_price = st.sidebar.number_input("Electricity Price (GBP/kWh)", 0.25)
-inflation_rate = st.sidebar.slider("Inflation Rate (%)", 0.0, 10.0, 3.0) / 100
-lifespan = st.sidebar.slider("System Lifespan (years)", 1, 30, 15)
-CO2_LPG = st.sidebar.number_input("CO2 Emission Factor (LPG) kg CO2/kWh", 0.214)
-CO2_electric = st.sidebar.number_input("CO2 Emission Factor (Electric) kg CO2/kWh", 0.1)
+st.sidebar.header("User Inputs")
 
-LPG_cost = lifecycle_cost(initial_cost_LPG, annual_energy_consumption, LPG_price, inflation_rate, lifespan)
-electric_cost = lifecycle_cost(initial_cost_electric, annual_energy_consumption, electricity_price, inflation_rate, lifespan)
-LPG_emissions = co2_emissions(annual_energy_consumption, CO2_LPG, lifespan)
-electric_emissions = co2_emissions(annual_energy_consumption, CO2_electric, lifespan)
+# System selection
+option = st.sidebar.radio("Select System Type", ("LPG", "Electric"))
 
-st.subheader("Results")
-st.write(f"**Total Lifecycle Cost (LPG):** £{LPG_cost:,.2f}")
-st.write(f"**Total Lifecycle Cost (Electric):** £{electric_cost:,.2f}")
-st.write(f"**Total CO2 Emissions (LPG):** {LPG_emissions:,.2f} kg CO2")
-st.write(f"**Total CO2 Emissions (Electric):** {electric_emissions:,.2f} kg CO2")
+# Inputs for both systems
+initial_cost = st.sidebar.number_input("Initial Investment (£)", min_value=0, value=5000)
+energy_consumption = st.sidebar.number_input("Annual Energy Consumption (kWh)", min_value=0, value=10000)
+fuel_price = st.sidebar.number_input("Current Fuel Price (per kWh in £)", min_value=0.0, value=0.12)
+price_growth = st.sidebar.slider("Annual Fuel Price Growth (%)", min_value=0.0, max_value=10.0, value=2.0) / 100
+lifespan = st.sidebar.slider("System Lifetime (years)", min_value=1, max_value=30, value=15)
 
-if electric_cost < LPG_cost:
-    st.success("Switching to electric heating is cost-effective.")
+# Loan option
+use_loan = st.sidebar.checkbox("Use a Loan for Investment?")
+if use_loan:
+    loan_amount = st.sidebar.number_input("Loan Amount (£)", min_value=0, value=5000)
+    interest_rate = st.sidebar.slider("Loan Interest Rate (%)", min_value=0.0, max_value=20.0, value=5.0)
+    loan_term = st.sidebar.slider("Loan Term (years)", min_value=1, max_value=30, value=10)
+    total_loan_cost = calculate_loan_payment(loan_amount, interest_rate, loan_term)
 else:
-    st.warning("LPG remains cheaper over the lifetime.")
+    total_loan_cost = 0
 
-if electric_emissions < LPG_emissions:
-    st.success("Electric heating significantly reduces carbon emissions.")
+# Lifecycle cost calculation
+total_cost = calculate_lifecycle_cost(initial_cost, energy_consumption, fuel_price, price_growth, lifespan) + total_loan_cost
+
+# Display results
+st.subheader("Results")
+st.write(f"**Total Lifecycle Cost for {option} System:** £{total_cost:,.2f}")
+if use_loan:
+    st.write(f"**Total Loan Repayment:** £{total_loan_cost:,.2f}")
+
+# Conclusion
+st.subheader("Conclusion")
+if use_loan:
+    st.write("Using a loan increases the total cost but allows spreading payments over time. Assess affordability based on monthly payments.")
+else:
+    st.write("Without a loan, upfront investment is required, but long-term costs may be lower.")
