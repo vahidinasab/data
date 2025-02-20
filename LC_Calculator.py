@@ -6,7 +6,7 @@ import numpy as np
 logo_path = "logo.png"
 try:
     logo = Image.open(logo_path)
-    st.sidebar.image(logo, use_column_width=True)
+    st.sidebar.image(logo, use_container_width=True)
 except Exception as e:
     st.sidebar.error("Logo not found. Please upload 'salford_logo.png'")
 
